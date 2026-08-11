@@ -19,6 +19,7 @@ struct SettingsView: View {
                 ZoneStepperRow(title: "Upper", value: $upperLimit, range: lowerLimit...220, step: 1)
             }
         }
+        .background(Color.black)
         .navigationTitle("BPM")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {

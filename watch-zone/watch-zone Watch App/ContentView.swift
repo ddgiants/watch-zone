@@ -14,6 +14,7 @@ struct ContentView: View {
     @State private var showSettings = false
     @State private var countdownRemaining: Int?
     @State private var countdownTask: Task<Void, Never>?
+    @State private var showStart = false
 
     var body: some View {
         VStack(spacing: 8) {
@@ -32,8 +33,10 @@ struct ContentView: View {
             // Spacer()
 
             Text(primaryText)
-                .font(.system(size: 56, weight: .bold, design: .rounded))
+                .font(.system(size: showStart ? 64 : 56, weight: .bold, design: .rounded))
                 .foregroundStyle(primaryColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
                 .contentTransition(.numericText())
 
             Text(statusText)
@@ -65,12 +68,19 @@ struct ContentView: View {
         countdownTask = Task {
             while let remaining = countdownRemaining, remaining > 0 {
                 TonePlayer.shared.playCountdownTick()
-                countdownRemaining = remaining - 1
                 try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled, countdownRemaining != nil else { return }
+                let next = remaining - 1
+                guard next > 0 else { break }
+                countdownRemaining = next
             }
             guard !Task.isCancelled, countdownRemaining != nil else { return }
             await monitor.start()
+            showStart = true
             TonePlayer.shared.playStartBeep()
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            showStart = false
             countdownRemaining = nil
         }
     }
@@ -79,6 +89,7 @@ struct ContentView: View {
         countdownTask?.cancel()
         countdownTask = nil
         countdownRemaining = nil
+        showStart = false
     }
 
     @ViewBuilder
@@ -135,6 +146,7 @@ struct ContentView: View {
     }
 
     private var primaryText: String {
+        if showStart { return "START" }
         if let countdownRemaining {
             return "\(countdownRemaining)"
         }
@@ -142,11 +154,13 @@ struct ContentView: View {
     }
 
     private var primaryColor: Color {
+        if showStart { return .green }
         if isCountingDown { return .orange }
         return zoneColor
     }
 
     private var statusText: String {
+        if showStart { return "Go!" }
         if isCountingDown { return "Get Ready" }
         switch monitor.state {
         case .idle:
